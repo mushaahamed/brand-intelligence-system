@@ -9,7 +9,7 @@ GET  /track/click/{id}/{touch} → Email link click tracking
 GET  /health        → API health check
 GET  /config/check  → Check which APIs are configured
 """
-import os, json, structlog
+import os, json, traceback, structlog
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -110,9 +110,11 @@ def _run_analysis_job(job_id: str, name: str, url: str, category: str):
         _jobs[job_id]["result"]   = summary
         _jobs[job_id]["run_id"]   = result["run_id"]
     except Exception as e:
+        tb = traceback.format_exc()
         log.error("job_failed", job_id=job_id, error=str(e))
-        _jobs[job_id]["status"] = "failed"
-        _jobs[job_id]["error"]  = str(e)
+        _jobs[job_id]["status"]    = "failed"
+        _jobs[job_id]["error"]     = str(e)
+        _jobs[job_id]["traceback"] = tb
 
 
 @app.get("/status/{job_id}")
@@ -121,6 +123,23 @@ async def status(job_id: str):
     if not job:
         raise HTTPException(404, f"Job {job_id} not found")
     return job
+
+
+@app.get("/debug/{job_id}")
+async def debug(job_id: str):
+    """Full job state including traceback — use this when a job gets stuck or fails."""
+    job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, f"Job {job_id} not found")
+    return {
+        "job_id":    job_id,
+        "status":    job.get("status"),
+        "progress":  job.get("progress"),
+        "pipeline":  job.get("pipeline"),
+        "error":     job.get("error"),
+        "traceback": job.get("traceback"),
+        "full_state": job,
+    }
 
 
 @app.get("/report/{run_id}")

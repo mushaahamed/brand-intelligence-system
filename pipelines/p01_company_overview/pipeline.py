@@ -39,24 +39,17 @@ class CompanyOverviewPipeline(BasePipeline):
 
         # 1a. Crawl company website (About, Team, Press, Investors pages)
         log.info("p01_fetch_website", url=url)
-        pages = crawl_website(url, PIPELINE_ID, max_pages=8)
+        pages = crawl_website(url, PIPELINE_ID, max_pages=4)
         raw["website_pages"] = pages
 
-        # 1b. LinkedIn company search
-        log.info("p01_fetch_linkedin")
-        linkedin = run_actor(
-            "linkedin_company",
-            {"searchQuery": name, "maxResults": 1},
-            PIPELINE_ID
-        )
-        raw["linkedin"] = linkedin or []
-
-        # 1c. Google: funding, revenue, about
-        queries = [
+        # 1b. Google: company facts (replaces LinkedIn company actor — requires paid plan)
+        log.info("p01_fetch_company_facts")
+        company_queries = [
+            f"{name} employees founded headquarters LinkedIn",
             f"{name} funding series raised investors",
             f"{name} revenue employees founded about company",
         ]
-        for q in queries:
+        for q in company_queries:
             results = run_google_search(q, PIPELINE_ID, num_results=5)
             raw["news"].extend(results)
 

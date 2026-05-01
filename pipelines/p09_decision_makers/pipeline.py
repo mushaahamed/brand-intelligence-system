@@ -13,7 +13,7 @@ Target roles for experiential marketing pitch:
 """
 import json, structlog
 from pipelines.base import BasePipeline
-from utils.apify_client import scrape_linkedin_profiles, run_actor, run_google_search
+from utils.apify_client import run_google_search
 from utils.claude_client import synthesise
 from utils.helpers import safe_json_parse, truncate
 
@@ -62,18 +62,12 @@ class DecisionMakersPipeline(BasePipeline):
         n   = self.company_name
         raw = {"profiles": [], "google_people": []}
 
-        # LinkedIn search per target role
-        for role_query, role_type in TARGET_ROLES:
-            query = f"{n} {role_query}"
-            profiles = scrape_linkedin_profiles(query, PIPELINE_ID, max_results=2)
-            for p in (profiles or []):
-                p["_target_role_type"] = role_type
-            raw["profiles"].extend(profiles or [])
-
-        # Google search as fallback for public profiles
+        # Google Search for LinkedIn profiles (LinkedIn actors require paid Apify plan)
         google_queries = [
-            f'site:linkedin.com/in "{n}" "VP Marketing" OR "CMO" OR "Head of Brand"',
-            f'"{n}" "brand manager" OR "events manager" LinkedIn',
+            f'site:linkedin.com/in "{n}" "VP Marketing" OR "CMO" OR "Head of Brand" OR "Chief Marketing Officer"',
+            f'site:linkedin.com/in "{n}" "Brand Manager" OR "Senior Marketing Manager" OR "Marketing Lead"',
+            f'site:linkedin.com/in "{n}" "Events Manager" OR "Experiential Manager" OR "Activation Manager"',
+            f'site:linkedin.com/in "{n}" "Head of HR" OR "Head of People" OR "People and Culture" OR "CHRO"',
         ]
         for q in google_queries:
             raw["google_people"].extend(run_google_search(q, PIPELINE_ID, num_results=5))

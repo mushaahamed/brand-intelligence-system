@@ -32,8 +32,6 @@ def run_actor(
     timeout_secs: int = None,
     wait_for_finish: bool = True,
 ) -> Optional[list[dict]]:
-    if timeout_secs is None:
-        timeout_secs = ACTOR_TIMEOUT
     """
     Run an Apify actor and return its dataset items.
 
@@ -47,6 +45,8 @@ def run_actor(
     Returns:
         List of result dicts, or None on failure
     """
+    if timeout_secs is None:
+        timeout_secs = ACTOR_TIMEOUT
     token    = _get_token_for_pipeline(pipeline_id)
     actor_id = ACTORS.get(actor_key)
 
